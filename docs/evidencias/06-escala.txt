@@ -1,0 +1,42 @@
+Data: 2026-10-17 (America/Sao_Paulo)
+
+> docker compose up -d --scale web=3
+ Container achados-perdidos-web-1 Running 
+ Container achados-perdidos-db-1 Running 
+ Container achados-perdidos-web-3 Creating 
+ Container achados-perdidos-web-2 Creating 
+ Container achados-perdidos-web-2 Created 
+ Container achados-perdidos-web-3 Created 
+ Container achados-perdidos-db-1 Waiting 
+ Container achados-perdidos-db-1 Healthy 
+ Container achados-perdidos-web-3 Starting 
+Error response from daemon: failed to set up container networking: driver failed programming external connectivity on endpoint achados-perdidos-web-3 (691dd877efa2c909df947b71ac791fc09a05ab731ab65ff04409cb2a75b01fd3): Bind for 0.0.0.0:8080 failed: port is already allocated
+Exit code: 1
+
+> docker compose ps -a
+NAME                     IMAGE                  COMMAND                  SERVICE   CREATED         STATUS                   PORTS
+achados-perdidos-db-1    postgres:16-alpine     "docker-entrypoint.s…"   db        9 seconds ago   Up 9 seconds (healthy)   5432/tcp
+achados-perdidos-web-1   achados-perdidos-web   "gunicorn --bind 0.0…"   web       9 seconds ago   Up 3 seconds             0.0.0.0:8080->5000/tcp, [::]:8080->5000/tcp
+achados-perdidos-web-2   achados-perdidos-web   "gunicorn --bind 0.0…"   web       1 second ago    Created                  
+achados-perdidos-web-3   achados-perdidos-web   "gunicorn --bind 0.0…"   web       1 second ago    Created                  
+Exit code: 0
+
+> docker compose up -d --scale web=1
+ Container achados-perdidos-web-1 Running 
+ Container achados-perdidos-db-1 Running 
+ Container achados-perdidos-web-3 Stopping 
+ Container achados-perdidos-web-2 Stopping 
+ Container achados-perdidos-web-2 Stopped 
+ Container achados-perdidos-web-2 Removing 
+ Container achados-perdidos-web-3 Stopped 
+ Container achados-perdidos-web-3 Removing 
+ Container achados-perdidos-web-3 Removed 
+ Container achados-perdidos-web-2 Removed 
+ Container achados-perdidos-db-1 Waiting 
+ Container achados-perdidos-db-1 Healthy 
+Exit code: 0
+
+> curl.exe -sS http://localhost:8080/estatisticas
+{"fotos_no_volume":3,"itens_no_banco":6}
+Exit code: 0
+

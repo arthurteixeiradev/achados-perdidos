@@ -1,0 +1,5 @@
+Navegador Chrome em modo headless; URL real da foto retornada em GET /itens.
+> chrome.exe --headless=new --disable-gpu --disable-extensions --no-first-run --user-data-dir=C:\Users\arthu\Desktop\ATV-G1\chrome-validacao --window-size=800,600 --virtual-time-budget=1500 --screenshot=C:\Users\arthu\Desktop\ATV-G1\achados-perdidos\docs\evidencias\10-foto-navegador.png http://localhost:8080/fotos/cb01a0093f3b4b818974bdbc9e34c9c8.jpg
+Exit code: 0
+8254 bytes written to file C:\Users\arthu\Desktop\ATV-G1\achados-perdidos\docs\evidencias\10-foto-navegador.png
+Screenshot: 10-foto-navegador.png; SHA256: E4657B328304792322B698237E3F02F64AE772C19B5FE24E84D9CE49B5115A0F

@@ -1,0 +1,12 @@
+HTTP/1.1 200 OK
+Server: gunicorn
+Date: Sat, 17 Oct 2026 18:52:33 GMT
+Connection: close
+Content-Disposition: inline; filename=1b4a81d3f90a438f9bdafd7daced1810.jpg
+Content-Type: image/jpeg
+Content-Length: 3262
+Last-Modified: Sat, 17 Oct 2026 18:52:33 GMT
+Cache-Control: no-cache
+ETag: "1792263153.1784098-3262-2407600047"
+Accept-Ranges: bytes
+

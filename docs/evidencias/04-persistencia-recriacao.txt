@@ -1,0 +1,64 @@
+Data: 2026-10-17 (America/Sao_Paulo)
+
+> curl.exe -sS http://localhost:8080/estatisticas
+{"fotos_no_volume":1,"itens_no_banco":4}
+Exit code: 0
+
+> curl.exe -sS -F "descricao=Garrafa com foto" -F "local=Bloco B" -F foto=@docs/evidencias/oculos.jpg http://localhost:8080/itens
+{"foto":"e262976fa4c34ebfa1894e0366ba89b0.jpg","id":5}
+Exit code: 0
+
+> curl.exe -sS -F "descricao=Casaco com foto" -F "local=Bloco B" -F foto=@docs/evidencias/oculos.jpg http://localhost:8080/itens
+{"foto":"931d336391e44d8496b9f11465ec67c1.jpg","id":6}
+Exit code: 0
+
+> curl.exe -sS http://localhost:8080/estatisticas
+{"fotos_no_volume":3,"itens_no_banco":6}
+Exit code: 0
+
+> curl.exe -sS http://localhost:8080/itens
+[{"criado_em":"2026-10-17T18:52:34.437344","descricao":"Casaco com foto","foto":"/fotos/931d336391e44d8496b9f11465ec67c1.jpg","id":6,"local":"Bloco B"},{"criado_em":"2026-10-17T18:52:34.322967","descricao":"Garrafa com foto","foto":"/fotos/e262976fa4c34ebfa1894e0366ba89b0.jpg","id":5,"local":"Bloco B"},{"criado_em":"2026-10-17T18:52:33.184239","descricao":"Oculos de grau","foto":"/fotos/1b4a81d3f90a438f9bdafd7daced1810.jpg","id":4,"local":"Bloco B"},{"criado_em":"2026-10-17T18:51:23.192540","descricao":"Garrafa termica azul","foto":null,"id":1,"local":"Biblioteca"},{"criado_em":"2026-10-17T18:51:23.192540","descricao":"Carregador de notebook USB-C","foto":null,"id":2,"local":"Laboratorio 3"},{"criado_em":"2026-10-17T18:51:23.192540","descricao":"Casaco preto com capuz","foto":null,"id":3,"local":"Cantina"}]
+Exit code: 0
+
+> docker compose down
+ Container achados-perdidos-web-1 Stopping 
+ Container achados-perdidos-web-1 Stopped 
+ Container achados-perdidos-web-1 Removing 
+ Container achados-perdidos-web-1 Removed 
+ Container achados-perdidos-db-1 Stopping 
+ Container achados-perdidos-db-1 Stopped 
+ Container achados-perdidos-db-1 Removing 
+ Container achados-perdidos-db-1 Removed 
+ Network achados-perdidos_rede_interna Removing 
+ Network achados-perdidos_rede_interna Removed 
+Exit code: 0
+
+> docker compose up -d
+ Network achados-perdidos_rede_interna Creating 
+ Network achados-perdidos_rede_interna Creating 
+ Network achados-perdidos_rede_interna Created 
+ Network achados-perdidos_rede_interna Created 
+ Container achados-perdidos-db-1 Creating 
+ Container achados-perdidos-db-1 Created 
+ Container achados-perdidos-web-1 Creating 
+ Container achados-perdidos-web-1 Created 
+ Container achados-perdidos-db-1 Starting 
+ Container achados-perdidos-db-1 Started 
+ Container achados-perdidos-db-1 Waiting 
+ Container achados-perdidos-db-1 Healthy 
+ Container achados-perdidos-web-1 Starting 
+ Container achados-perdidos-web-1 Started 
+Exit code: 0
+
+> curl.exe -sS http://localhost:8080/estatisticas
+{"fotos_no_volume":3,"itens_no_banco":6}
+Exit code: 0
+
+> curl.exe -sS http://localhost:8080/itens
+[{"criado_em":"2026-10-17T18:52:34.437344","descricao":"Casaco com foto","foto":"/fotos/931d336391e44d8496b9f11465ec67c1.jpg","id":6,"local":"Bloco B"},{"criado_em":"2026-10-17T18:52:34.322967","descricao":"Garrafa com foto","foto":"/fotos/e262976fa4c34ebfa1894e0366ba89b0.jpg","id":5,"local":"Bloco B"},{"criado_em":"2026-10-17T18:52:33.184239","descricao":"Oculos de grau","foto":"/fotos/1b4a81d3f90a438f9bdafd7daced1810.jpg","id":4,"local":"Bloco B"},{"criado_em":"2026-10-17T18:51:23.192540","descricao":"Garrafa termica azul","foto":null,"id":1,"local":"Biblioteca"},{"criado_em":"2026-10-17T18:51:23.192540","descricao":"Carregador de notebook USB-C","foto":null,"id":2,"local":"Laboratorio 3"},{"criado_em":"2026-10-17T18:51:23.192540","descricao":"Casaco preto com capuz","foto":null,"id":3,"local":"Cantina"}]
+Exit code: 0
+
+> curl.exe -sS -o docs/evidencias/foto-apos-recriar.jpg http://localhost:8080/fotos/1b4a81d3f90a438f9bdafd7daced1810.jpg
+Exit code: 0
+
+SHA256 apos recriar: CECC7E177F20692A4FA117C79F034A749944C1D2FED0A01593BD7A2E8EDC202A

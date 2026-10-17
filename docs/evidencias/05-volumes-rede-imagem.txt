@@ -1,0 +1,138 @@
+Data: 2026-10-17 (America/Sao_Paulo)
+
+> curl.exe -sS http://localhost:8080/estatisticas
+{"fotos_no_volume":3,"itens_no_banco":6}
+Exit code: 0
+
+> docker volume ls
+DRIVER    VOLUME NAME
+local     achados-perdidos_dados_banco
+local     achados-perdidos_fotos
+Exit code: 0
+
+> docker volume inspect achados-perdidos_dados_banco achados-perdidos_fotos
+[
+    {
+        "CreatedAt": "2026-10-17T18:51:21Z",
+        "Driver": "local",
+        "Labels": {
+            "com.docker.compose.config-hash": "4ba06f54269045a91b2e9d6ea8d9837dc0d6f3b74bb1e27ee4f266381031c402",
+            "com.docker.compose.project": "achados-perdidos",
+            "com.docker.compose.version": "5.4.0",
+            "com.docker.compose.volume": "dados_banco"
+        },
+        "Mountpoint": "/var/lib/docker/volumes/achados-perdidos_dados_banco/_data",
+        "Name": "achados-perdidos_dados_banco",
+        "Options": null,
+        "Scope": "local"
+    },
+    {
+        "CreatedAt": "2026-10-17T18:51:21Z",
+        "Driver": "local",
+        "Labels": {
+            "com.docker.compose.config-hash": "f81a00e624dc4820542b31045a72ca847fa9f7f231f810f740569750675af6fa",
+            "com.docker.compose.project": "achados-perdidos",
+            "com.docker.compose.version": "5.4.0",
+            "com.docker.compose.volume": "fotos"
+        },
+        "Mountpoint": "/var/lib/docker/volumes/achados-perdidos_fotos/_data",
+        "Name": "achados-perdidos_fotos",
+        "Options": null,
+        "Scope": "local"
+    }
+]
+Exit code: 0
+
+> docker compose exec web ls -l /app/uploads
+total 12
+-rw-r--r-- 1 appuser appuser 3262 Oct 17 18:52 1b4a81d3f90a438f9bdafd7daced1810.jpg
+-rw-r--r-- 1 appuser appuser 3262 Oct 17 18:52 931d336391e44d8496b9f11465ec67c1.jpg
+-rw-r--r-- 1 appuser appuser 3262 Oct 17 18:52 e262976fa4c34ebfa1894e0366ba89b0.jpg
+Exit code: 0
+
+> docker network inspect achados-perdidos_rede_interna
+[
+    {
+        "Name": "achados-perdidos_rede_interna",
+        "Id": "99052b9ef18a034c8b958718c8e70bc9820247764151cdca0877db2659f2bd04",
+        "Created": "2026-10-17T18:52:35.954599783Z",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv4": true,
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                    "Subnet": "172.18.0.0/16",
+                    "Gateway": "172.18.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Options": {
+            "com.docker.network.enable_ipv4": "true",
+            "com.docker.network.enable_ipv6": "false"
+        },
+        "Labels": {
+            "com.docker.compose.config-hash": "86a318c8db10da1fc0c8c8fa73ba1d6b008ed8c76eb44b4821d23f42e84b1737",
+            "com.docker.compose.network": "rede_interna",
+            "com.docker.compose.project": "achados-perdidos",
+            "com.docker.compose.version": "5.4.0"
+        },
+        "Containers": {
+            "55fd8cefac0a72a93f3312146c86fa30aaf8abef286b78a1dc5f74f0a830eb7e": {
+                "Name": "achados-perdidos-db-1",
+                "EndpointID": "57f69343d845c3fe92177148bdb01b0c00a10661ca106a9f8be95a6dd8951a25",
+                "MacAddress": "7e:53:09:af:9a:60",
+                "IPv4Address": "172.18.0.2/16",
+                "IPv6Address": ""
+            },
+            "dffc2cdb556f270462af02615fb9e983f0d11379a967439b7f260a70fdccbf79": {
+                "Name": "achados-perdidos-web-1",
+                "EndpointID": "8d9b4e2e4fffbe2f9fd4b1d9e7434d18c51c3b1c55caccd60a0ebb60db82e581",
+                "MacAddress": "7a:b4:85:0a:51:eb",
+                "IPv4Address": "172.18.0.3/16",
+                "IPv6Address": ""
+            }
+        },
+        "Status": {
+            "IPAM": {
+                "Subnets": {
+                    "172.18.0.0/16": {
+                        "IPsInUse": 5,
+                        "DynamicIPsAvailable": 65531
+                    }
+                }
+            }
+        }
+    }
+]
+Exit code: 0
+
+> docker image ls
+IMAGE                         ID             DISK USAGE   CONTENT SIZE   EXTRA
+achados-perdidos-web:latest   77d7748a05ec        219MB         53.8MB   U    
+postgres:16-alpine            721873c34ceb        420MB          117MB   U    
+python:3.12-slim              a6e34c598f24        179MB         45.4MB        
+Exit code: 0
+
+> docker image inspect achados-perdidos-web --format "Tamanho em bytes: {{.Size}}; Usuario: {{.Config.User}}; CMD: {{json .Config.Cmd}}"
+Tamanho em bytes: 53758665; Usuario: appuser; CMD: ["gunicorn","--bind","0.0.0.0:5000","app:app"]
+Exit code: 0
+
+> docker compose port web 5000
+0.0.0.0:8080
+Exit code: 0
+
+> docker compose port db 5432
+invalid IP:0
+Exit code: 0
+

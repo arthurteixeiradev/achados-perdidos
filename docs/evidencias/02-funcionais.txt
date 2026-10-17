@@ -1,0 +1,82 @@
+Data: 2026-10-17 (America/Sao_Paulo)
+
+> docker version
+Client:
+ Version:           29.7.2
+ API version:       1.55
+ Go version:        go1.26.5
+ Git commit:        a7dcaa6
+ Built:             Wed Aug  5 18:31:33 2026
+ OS/Arch:           windows/amd64
+ Context:           desktop-linux
+
+Server: Docker Desktop 4.87.0 (236836)
+ Engine:
+  Version:          29.7.2
+  API version:      1.55 (minimum version 1.40)
+  Go version:       go1.26.5
+  Git commit:       6a43e3d
+  Built:            Wed Aug  5 18:28:36 2026
+  OS/Arch:          linux/amd64
+  Experimental:     false
+ containerd:
+  Version:          v2.2.5
+  GitCommit:        e53c7c1516c3b2bff98eb76f1f4117477e6f4e66
+ runc:
+  Version:          1.3.6
+  GitCommit:        v1.3.6-0-g491b69ba
+ docker-init:
+  Version:          0.19.0
+  GitCommit:        de40ad0
+Exit code: 0
+
+> docker compose version
+Docker Compose version v5.4.0
+Exit code: 0
+
+> docker compose ps
+NAME                     IMAGE                  COMMAND                  SERVICE   CREATED              STATUS                        PORTS
+achados-perdidos-db-1    postgres:16-alpine     "docker-entrypoint.s…"   db        About a minute ago   Up About a minute (healthy)   5432/tcp
+achados-perdidos-web-1   achados-perdidos-web   "gunicorn --bind 0.0…"   web       About a minute ago   Up About a minute             0.0.0.0:8080->5000/tcp, [::]:8080->5000/tcp
+Exit code: 0
+
+> curl.exe -sS http://localhost:8080/health
+{"banco":"conectado","container":"f5b04a6b89e9","status":"ok"}
+Exit code: 0
+
+> curl.exe -sS http://localhost:8080/itens
+[{"criado_em":"2026-10-17T18:51:23.192540","descricao":"Garrafa termica azul","foto":null,"id":1,"local":"Biblioteca"},{"criado_em":"2026-10-17T18:51:23.192540","descricao":"Carregador de notebook USB-C","foto":null,"id":2,"local":"Laboratorio 3"},{"criado_em":"2026-10-17T18:51:23.192540","descricao":"Casaco preto com capuz","foto":null,"id":3,"local":"Cantina"}]
+Exit code: 0
+
+> curl.exe -sS http://localhost:8080/itens?local=biblio
+[{"criado_em":"2026-10-17T18:51:23.192540","descricao":"Garrafa termica azul","foto":null,"id":1,"local":"Biblioteca"}]
+Exit code: 0
+
+> curl.exe -sS -F "descricao=Oculos de grau" -F "local=Bloco B" -F foto=@docs/evidencias/oculos.jpg http://localhost:8080/itens
+{"foto":"1b4a81d3f90a438f9bdafd7daced1810.jpg","id":4}
+Exit code: 0
+
+> curl.exe -sS http://localhost:8080/estatisticas
+{"fotos_no_volume":1,"itens_no_banco":4}
+Exit code: 0
+
+> curl.exe -sS http://localhost:8080/itens
+[{"criado_em":"2026-10-17T18:52:33.184239","descricao":"Oculos de grau","foto":"/fotos/1b4a81d3f90a438f9bdafd7daced1810.jpg","id":4,"local":"Bloco B"},{"criado_em":"2026-10-17T18:51:23.192540","descricao":"Garrafa termica azul","foto":null,"id":1,"local":"Biblioteca"},{"criado_em":"2026-10-17T18:51:23.192540","descricao":"Carregador de notebook USB-C","foto":null,"id":2,"local":"Laboratorio 3"},{"criado_em":"2026-10-17T18:51:23.192540","descricao":"Casaco preto com capuz","foto":null,"id":3,"local":"Cantina"}]
+Exit code: 0
+
+> curl.exe -sS -D docs/evidencias/03-foto-http.txt -o docs/evidencias/foto-retornada.jpg http://localhost:8080/fotos/1b4a81d3f90a438f9bdafd7daced1810.jpg
+Exit code: 0
+
+SHA256 original: CECC7E177F20692A4FA117C79F034A749944C1D2FED0A01593BD7A2E8EDC202A
+SHA256 recebida: CECC7E177F20692A4FA117C79F034A749944C1D2FED0A01593BD7A2E8EDC202A
+> docker compose logs web --tail 20
+web-1  | [2026-10-17 18:51:28 +0000] [1] [INFO] Starting gunicorn 23.0.0
+web-1  | [2026-10-17 18:51:28 +0000] [1] [INFO] Listening at: http://0.0.0.0:5000 (1)
+web-1  | [2026-10-17 18:51:28 +0000] [1] [INFO] Using worker: sync
+web-1  | [2026-10-17 18:51:28 +0000] [7] [INFO] Booting worker with pid: 7
+Exit code: 0
+
+> docker compose exec -T web whoami
+appuser
+Exit code: 0
+
