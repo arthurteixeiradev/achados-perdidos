@@ -1,12 +1,14 @@
-# Bônus da seção 6
+# Bônus
 
-A solução principal continua em `docker-compose.yml`, com somente web e db. Os serviços opcionais ficam em `docs/bonus/docker-compose.bonus.yml` e são ativados explicitamente com `-f`. Execute os comandos desta página na raiz `achados-perdidos/`, com o `.env` já configurado. O override usa `!reset`, suportado no Docker Compose 2.24.4 ou superior ([documentação de merge](https://docs.docker.com/reference/compose-file/merge/)); foi testado no Compose v5.4.0.
+Os bônus ficam em `docs/bonus/docker-compose.bonus.yml`. A configuração principal continua com apenas web e db. Os comandos desta página usam o Prompt de Comando do Windows (cmd), na pasta `achados-perdidos`.
 
-## Proxy nginx (+0,4)
+O arquivo de bônus usa `!reset` para retirar a publicação de web. Isso precisa de Docker Compose 2.24.4 ou superior; os testes usaram a versão 5.4.0 ([documentação](https://docs.docker.com/reference/compose-file/merge/)).
 
-Encerre a configuração principal para liberar 8080 e suba a composição dos dois arquivos:
+## 1. nginx
 
-```powershell
+Encerre a configuração principal e suba os dois arquivos:
+
+```cmd
 docker compose down
 docker compose -f docker-compose.yml -f docs/bonus/docker-compose.bonus.yml up -d --build
 docker compose -f docker-compose.yml -f docs/bonus/docker-compose.bonus.yml ps
@@ -14,28 +16,28 @@ curl.exe http://localhost:8080/health
 curl.exe -I http://localhost:8080/health
 ```
 
-O override limpa `ports` de web, monta `nginx.conf` somente para leitura e publica `8080:80` exclusivamente no proxy para a API. `proxy_pass http://web:5000` encaminha as rotas existentes. Os mesmos volumes e configurações do banco são preservados. A [evidência 09](../evidencias/09-bonus-proxy-adminer.txt) mostra web apenas com `5000/tcp`, nginx com a publicação 8080 e HTTP 200 pelo proxy.
+Nginx publica 8080:80 e encaminha as requisições para `web:5000`. Web fica sem porta publicada no computador. Nos testes, o health respondeu normalmente, e os cabeçalhos mostraram `Server: nginx/1.31.7`.
 
 ```mermaid
 flowchart TB
-    subgraph HOST["Host / Docker Desktop"]
-        CLIENTE["Navegador / curl"]
-        SQL["db/init.sql no host"]
-        CONF["docs/bonus/nginx.conf no host"]
-        PAINEL["Navegador: localhost:8081<br/>somente com profile debug"]
+    subgraph HOST["Computador e Docker Desktop"]
+        CLIENTE["Navegador ou curl"]
+        PAINEL["Navegador: localhost:8081"]
+        SQL["db/init.sql"]
+        CONF["docs/bonus/nginx.conf"]
         subgraph REDE["rede_interna — bridge"]
-            NGINX["nginx:80<br/>único ponto de entrada da API"]
+            NGINX["nginx:80"]
             WEB["web:5000<br/>sem porta publicada"]
             DB["db:5432<br/>sem porta publicada"]
             ADMINER["adminer:8080<br/>profile debug"]
-            NGINX -->|"HTTP: web:5000"| WEB
-            WEB -->|"SQL: db:5432"| DB
-            ADMINER -->|"SQL: db:5432"| DB
+            NGINX -->|"HTTP web:5000"| WEB
+            WEB -->|"SQL db:5432"| DB
+            ADMINER -->|"SQL db:5432"| DB
         end
         FOTOS[("fotos → web:/app/uploads")]
         DADOS[("dados_banco → db:/var/lib/postgresql/data")]
-        CLIENTE -->|"localhost:8080 → nginx:80"| NGINX
-        PAINEL -->|"8081:8080 — debug"| ADMINER
+        CLIENTE -->|"8080:80"| NGINX
+        PAINEL -->|"8081:8080"| ADMINER
         WEB --> FOTOS
         DB --> DADOS
         SQL -->|"bind ro: /docker-entrypoint-initdb.d/init.sql"| DB
@@ -43,45 +45,66 @@ flowchart TB
     end
 ```
 
-Contêineres são os participantes da rede; clientes, arquivos de configuração e volumes ficam fora dela. O painel de debug usa 8081, sem publicar 5432 do banco. O proxy deste bônus encaminha a uma instância web; a discussão de balanceamento para três réplicas está em Q7, sem modificar a arquitetura obrigatória.
+Os contêineres participam da rede. Os clientes, arquivos e volumes ficam fora dela. O proxy deste bônus foi testado com uma instância de web; a escala para três instâncias é discutida na Q7.
 
-## Backup e restauração de fotos (+0,3)
+## 2. Adminer
 
-O procedimento abaixo usa a configuração principal e o nome de projeto derivado da pasta `achados-perdidos`. Execute com fotos já cadastradas, antes de qualquer `down -v`. Pare web durante a cópia para impedir alterações concorrentes nos arquivos. Os comandos PowerShell usam contêineres temporários e não instalam ferramentas no host:
+O serviço tem `profiles: ["debug"]`. Para iniciá-lo:
 
-```powershell
-docker compose stop web
-$backupPath = (Resolve-Path ./docs/evidencias).Path
-docker run --rm --mount type=volume,source=achados-perdidos_fotos,target=/origem,readonly --mount "type=bind,source=$backupPath,target=/backup" alpine tar -czf /backup/fotos.tar.gz -C /origem .
-docker volume create achados-perdidos_fotos_restauradas
-docker run --rm --mount type=volume,source=achados-perdidos_fotos_restauradas,target=/destino --mount "type=bind,source=$backupPath,target=/backup,readonly" alpine tar -xzf /backup/fotos.tar.gz -C /destino
-docker run --rm --mount type=volume,source=achados-perdidos_fotos,target=/origem,readonly --mount type=volume,source=achados-perdidos_fotos_restauradas,target=/destino,readonly alpine sh -c 'diff -r /origem /destino && ls -ln /destino && sha256sum /origem/*.jpg /destino/*.jpg'
-docker compose start web
-```
-
-Use um nome ainda inexistente para o volume de restauração; `volume create` não esvazia um volume existente. O `diff` deve sair com código 0 e os hashes de cada arquivo devem coincidir. A [evidência 07](../evidencias/07-bonus-backup.txt) demonstra a restauração de três fotos em um volume novo, os hashes iguais e a preservação do proprietário UID/GID 1000. O arquivo real está em [fotos.tar.gz](../evidencias/fotos.tar.gz). É um backup das fotos daquele momento; ele não contém o banco nem recupera sozinho os registros SQL.
-
-Após a demonstração, removi apenas o volume temporário restaurado, como registrado na evidência. Para fazer a mesma limpeza:
-
-```powershell
-docker volume rm achados-perdidos_fotos_restauradas
-```
-
-## Adminer com profile debug (+0,3)
-
-O serviço declara literalmente `profiles: ["debug"]`. Sem esse profile ele não inicia. Para ativá-lo com a configuração de bônus:
-
-```powershell
+```cmd
 docker compose -f docker-compose.yml -f docs/bonus/docker-compose.bonus.yml --profile debug up -d
+docker compose -f docker-compose.yml -f docs/bonus/docker-compose.bonus.yml --profile debug ps
 ```
 
-Abra `http://localhost:8081`. Selecione PostgreSQL, servidor `db`, e informe banco, usuário e senha definidos no seu `.env`. Não use `localhost` como servidor dentro do painel. A [evidência 09](../evidencias/09-bonus-proxy-adminer.txt) mostra primeiro a composição sem Adminer, depois a ativação com debug e a resposta HTTP 200 do painel. O login interativo não foi executado; a conexão SQL já foi comprovada pela API.
+Abra `http://localhost:8081`. Escolha PostgreSQL, use `db` como servidor e preencha usuário, senha e banco com os valores do seu `.env`.
+
+Nos testes guiados, o login funcionou. A tabela `itens` mostrou as cinco colunas e os três exemplos, todos com foto NULL. As capturas estão no [relatório de testes](../RELATORIO_TESTES.md).
+
+## 3. Backup e restauração de fotos
+
+Execute depois de cadastrar uma foto. O nome dos volumes abaixo considera a pasta do projeto chamada `achados-perdidos`.
+
+Pause web e crie o backup em `docs/evidencias/fotos-reteste.tar.gz`:
+
+```cmd
+docker compose -f docker-compose.yml -f docs/bonus/docker-compose.bonus.yml stop web
+docker run --rm --mount type=volume,source=achados-perdidos_fotos,target=/origem,readonly --mount "type=bind,source=%cd%\docs\evidencias,target=/backup" alpine tar -czf /backup/fotos-reteste.tar.gz -C /origem .
+docker run --rm --mount "type=bind,source=%cd%\docs\evidencias,target=/backup,readonly" alpine tar -tzf /backup/fotos-reteste.tar.gz
+docker compose -f docker-compose.yml -f docs/bonus/docker-compose.bonus.yml start web
+```
+
+Confira se o volume de restauração ainda não existe:
+
+```cmd
+docker volume inspect achados-perdidos_fotos_restauradas_reteste
+```
+
+O resultado esperado é `no such volume`. Se já existir, escolha outro nome novo e ajuste os próximos comandos.
+
+Crie o volume, restaure o arquivo e compare o conteúdo:
+
+```cmd
+docker volume create achados-perdidos_fotos_restauradas_reteste
+docker run --rm --mount type=volume,source=achados-perdidos_fotos_restauradas_reteste,target=/destino --mount "type=bind,source=%cd%\docs\evidencias,target=/backup,readonly" alpine tar -xzf /backup/fotos-reteste.tar.gz -C /destino
+docker run --rm --mount type=volume,source=achados-perdidos_fotos,target=/origem,readonly --mount type=volume,source=achados-perdidos_fotos_restauradas_reteste,target=/destino,readonly alpine sh -c "diff -r /origem /destino && echo CONTEUDO_IDENTICO && ls -ln /destino && sha256sum /origem/*.jpg /destino/*.jpg"
+```
+
+No teste guiado, o diff não encontrou diferenças. A foto original e a restaurada tinham 3262 bytes, o mesmo SHA256 e proprietário/grupo 1000. Depois da conferência, o volume temporário foi removido:
+
+```cmd
+docker volume rm achados-perdidos_fotos_restauradas_reteste
+```
+
+Esse backup contém as fotos, não os registros do banco. O arquivo gerado no teste está em [fotos-reteste.tar.gz](../evidencias/fotos-reteste.tar.gz).
 
 ## Voltar à configuração principal
 
-```powershell
+```cmd
 docker compose -f docker-compose.yml -f docs/bonus/docker-compose.bonus.yml --profile debug down
 docker compose up -d
+docker compose ps
+curl.exe http://localhost:8080/health
+curl.exe http://localhost:8080/estatisticas
 ```
 
-Sem `-v`, os volumes são preservados. A evidência 09 registra a remoção dos serviços opcionais, a volta da publicação `8080:5000` em web e a conexão normal ao banco.
+Sem `-v`, os volumes são mantidos. Ao terminar, ficaram apenas web e db, com health normal, quatro itens e uma foto.

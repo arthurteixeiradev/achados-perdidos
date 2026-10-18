@@ -1,73 +1,73 @@
-# Reflexão — questões Q1 a Q7
+# Reflexão
 
-## Q1 — Resolução do nome db
+## Q1 — Como web encontra db?
 
-`docker-compose.yml` conecta web e db à bridge própria `rede_interna`.  
-O DNS embutido do Docker resolve o nome do serviço `db` para seu IP nessa rede.  
-Assim, `DB_HOST=db` continua válido mesmo se a recriação mudar o endereço IP.  
-A [evidência 05](evidencias/05-volumes-rede-imagem.txt) identifica os participantes da rede; a conexão funciona na evidência 02.  
-Na bridge padrão de `docker run`, não há essa resolução automática entre nomes: seria preciso IP, configuração explícita ou o legado `--link`, conforme a [documentação Docker](https://docs.docker.com/engine/network/drivers/bridge/).
+Web e db estão na mesma rede bridge, definida em `docker-compose.yml`.  
+O DNS do Docker resolve o nome `db` para o IP do contêiner do banco.  
+Assim, a aplicação continua usando `db:5432` mesmo após uma mudança de IP.  
+Na bridge padrão de `docker run`, essa resolução por nome não acontece automaticamente; seria preciso usar IP, configurar a resolução ou recorrer ao legado `--link`.  
+A rede está nas capturas e na evidência 05; a diferença entre as bridges está na [documentação Docker](https://docs.docker.com/engine/network/drivers/bridge/).
 
-## Q2 — Volume nomeado e bind mount
+## Q2 — Volume nomeado ou bind mount?
 
-Um volume nomeado é armazenamento administrado pelo Docker, independente do diretório do projeto.  
-Um bind mount projeta um arquivo ou diretório específico do host dentro do contêiner.  
-O Compose usa `./db/init.sql:...:ro` porque o SQL é um arquivo fornecido e versionado, apenas lido na inicialização.  
-`dados_banco` guarda os arquivos mutáveis do PostgreSQL sem depender de um caminho escolhido no Windows.  
-`fotos` segue a mesma lógica; os caminhos físicos e a persistência aparecem nas evidências [04](evidencias/04-persistencia-recriacao.txt) e [05](evidencias/05-volumes-rede-imagem.txt).
+O volume nomeado é criado e administrado pelo Docker; o bind mount usa um caminho do computador.  
+Usamos bind mount para `db/init.sql` porque ele já é um arquivo do projeto e só precisa ser lido pelo banco.  
+Por isso sua montagem tem `:ro`, que impede alterações por dentro do contêiner.  
+Os arquivos do PostgreSQL e as fotos mudam durante o uso e precisam sobreviver à recriação, então ficaram nos volumes `dados_banco` e `fotos`.  
+Os caminhos físicos e os arquivos aparecem na evidência 05 e nas capturas da inspeção.
 
-## Q3 — Alteração posterior do init.sql
+## Q3 — Alterar init.sql depois da primeira subida funciona?
 
-Editar `db/init.sql` e repetir `up -d` não aplica a mudança a um banco já inicializado.  
-A imagem oficial só executa `/docker-entrypoint-initdb.d/` ao criar o banco em um diretório de dados vazio.  
-A [evidência 08](evidencias/08-persistencia-remocao.txt) mostra a execução do script após a remoção dos volumes e o retorno aos três exemplos.  
-Para preservar dados, faça backup do banco e aplique a alteração explicitamente com SQL, por exemplo `ALTER TABLE`, via `docker compose exec db psql -U <usuario> -d <banco>`.  
-`down -v` recriaria a estrutura, mas apagaria os dados; esse não é o procedimento para evoluir o banco existente ([imagem oficial](https://hub.docker.com/_/postgres)).
+Não basta editar `init.sql` e executar `up -d` de novo.  
+A imagem PostgreSQL só executa os scripts de inicialização quando o diretório de dados está vazio.  
+No teste com `down -v`, o volume foi apagado e o script voltou a criar os três exemplos, como mostram as capturas da remoção e da nova subida.  
+Para mudar uma tabela sem perder os dados, é preciso fazer backup e aplicar o SQL necessário, como um `ALTER TABLE`, no banco existente.  
+Isso pode ser feito com `docker compose exec db psql -U <usuario> -d <banco>`; o comportamento da inicialização está na [imagem oficial](https://hub.docker.com/_/postgres).
 
-## Q4 — Prontidão do banco
+## Q4 — Por que esperar service_healthy?
 
-`depends_on` simples estabelece ordem de início, mas um processo iniciado pode ainda estar inicializando o PostgreSQL.  
-Nesse intervalo, a primeira conexão de web poderia falhar e `/health` retornaria 503.  
-Nosso Compose testa `pg_isready` por TCP e usa `condition: service_healthy`.  
-A [evidência 01](evidencias/01-subida.txt) registra db saudável antes do início de web.  
-A condição trata a prontidão inicial; não faz supervisão contínua da dependência após iniciar web ([documentação Compose](https://docs.docker.com/compose/how-tos/startup-order/)).
+Um processo iniciado ainda pode estar preparando o banco e recusar conexões.  
+O `depends_on` simples só organiza a ordem de início dos contêineres.  
+No nosso Compose, `pg_isready` verifica a disponibilidade, e `service_healthy` faz web esperar esse resultado.  
+A saída da subida mostra db saudável antes do início de web; isso também está na evidência 01.  
+Essa espera vale para a inicialização e não reinicia web automaticamente se o banco falhar depois ([documentação Compose](https://docs.docker.com/compose/how-tos/startup-order/)).
 
-## Q5 — Cache das camadas
+## Q5 — Por que copiar requirements.txt antes de app.py?
 
-Em `app/Dockerfile`, copiamos `requirements.txt`, instalamos as dependências e só então copiamos `app.py`.  
-Se somente `app.py` mudar, o arquivo de requisitos e as etapas anteriores continuam iguais e podem reutilizar o cache do build.  
-O Docker reconstrói a partir do `COPY app.py`, sem reinstalar as dependências dessa camada anterior.  
-Se `requirements.txt` mudar, a instalação e as etapas seguintes precisam ser refeitas.  
-`--no-cache-dir` evita o cache de downloads do pip dentro da imagem; não desativa o cache de camadas Docker, cuja ordem aparece na [evidência 01](evidencias/01-subida.txt).
+As dependências mudam com menos frequência que o código da aplicação.  
+No Dockerfile, copiamos `requirements.txt`, instalamos os pacotes e depois copiamos `app.py`.  
+Se só `app.py` mudar, o Docker pode reaproveitar a camada que instalou as dependências.  
+Se a lista de pacotes mudar, essa instalação e as etapas seguintes precisam ser refeitas.  
+O `--no-cache-dir` evita o cache de downloads do pip, mas não desliga o cache de camadas do Docker; a ordem aparece na evidência 01.
 
-## Q6 — Porta do banco e proteção de dados
+## Q6 — Por que não publicar 5432? Como proteger as fotos?
 
-Web já alcança `db:5432` pela rede própria, portanto publicar essa porta não atende a uma necessidade do ambiente.  
-Nosso Compose publica apenas `8080:5000`; a [evidência 02](evidencias/02-funcionais.txt) mostra o banco sem mapeamento de porta para o host.  
-Isso reduz a exposição direta do banco; fotos de documentos continuam exigindo controle de acesso na API.  
-Relacionando à proteção de dados pessoais e ao art. 46 da [LGPD](https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm), proponho autenticação com autorização para consultar itens e fotos.  
-Como segunda medida, proponho HTTPS para proteger o transporte das fotos; ambas são propostas de reflexão, sem alterações ao código ou ao escopo obrigatório.
+A aplicação acessa o banco por `db:5432` na rede Docker, então não precisa publicar essa porta no computador.  
+O Compose publica apenas 8080 para web, como aparece nas saídas de `docker compose ps`.  
+Isso reduz a exposição direta do banco, mas as fotos de documentos ainda podem conter dados pessoais.  
+Considerando a proteção desses dados e o art. 46 da [LGPD](https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm), proponho autenticação e autorização para consultar itens e fotos.  
+A segunda medida seria HTTPS para proteger o envio das imagens; essas medidas são propostas da reflexão e não foram acrescentadas à aplicação.
 
-## Q7 — Três réplicas de web
+## Q7 — O que aconteceu com três réplicas?
 
-Executei `docker compose up -d --scale web=3`: a [evidência 06](evidencias/06-escala.txt) registra `port is already allocated`.  
-Cada réplica tenta reservar a mesma porta 8080 do host; a primeira continua rodando e as adicionais não conseguem iniciar.  
-Seria necessário retirar a publicação fixa das réplicas e encaminhar o tráfego por um proxy/balanceador configurado para distribuir entre as três instâncias.  
-No mesmo host Docker, elas podem compartilhar `fotos`: os UUIDs tornam improvável a colisão e cada upload grava seu próprio arquivo; permissões precisam permanecer compatíveis.  
-Isso não torna foto e INSERT uma transação atômica; falha entre ambos pode deixar arquivo órfão, como permite o código fornecido.  
-Em hosts diferentes, o volume local não é automaticamente compartilhado; seria necessário armazenamento compartilhado ou de objetos. Restaurei `--scale web=1` após o teste.
+O comando `docker compose up -d --scale web=3` falhou porque a porta 8080 já estava ocupada pela primeira instância.  
+As capturas mostram o erro; depois voltamos para uma instância com `--scale web=1`.  
+Para usar três réplicas, seria preciso retirar a publicação fixa de cada web e colocar um proxy/balanceador distribuindo as requisições entre elas.  
+No mesmo host, elas podem usar o volume `fotos`: cada upload ganha um UUID, o que torna a colisão de nomes muito improvável, mantendo permissões compatíveis.  
+Isso não garante uma transação única entre foto e banco; uma falha depois de salvar o arquivo pode deixá-lo sem registro.  
+Em hosts diferentes, o volume local não é compartilhado automaticamente; seria necessário armazenamento compartilhado ou de objetos.
 
-# 5.1 — Do ambiente local para a nuvem
+## 5.1 — Equivalência em nuvem
 
-| Peça do ambiente local | Microsoft Azure | AWS | Google Cloud |
+| Peça local | Microsoft Azure | AWS | Google Cloud |
 | --- | --- | --- | --- |
 | Contêiner web | Azure Container Apps | Amazon ECS com AWS Fargate | Cloud Run |
 | Contêiner db + volume dados_banco | Azure Database for PostgreSQL Flexible Server, com armazenamento gerenciado | Amazon RDS for PostgreSQL, com armazenamento gerenciado | Cloud SQL for PostgreSQL, com armazenamento gerenciado |
 | Volume fotos | Azure Blob Storage | Amazon S3 | Cloud Storage |
-| rede_interna | Azure Virtual Network (VNet), sub-redes e regras de segurança | Amazon VPC, sub-redes e security groups | VPC, sub-redes e regras de firewall |
-| Arquivo .env (segredos) | Azure Key Vault | AWS Secrets Manager | Secret Manager |
-| Imagem construída localmente | Azure Container Registry | Amazon Elastic Container Registry (ECR) | Artifact Registry |
+| rede_interna | Azure Virtual Network, sub-redes e regras de segurança | Amazon VPC, sub-redes e security groups | VPC, sub-redes e regras de firewall |
+| .env com segredos | Azure Key Vault | AWS Secrets Manager | Secret Manager |
+| Imagem local | Azure Container Registry | Amazon Elastic Container Registry | Artifact Registry |
 
-As equivalências indicam responsabilidades na arquitetura, não uma migração automática. Os serviços de execução foram conferidos nas documentações de [Azure Container Apps](https://learn.microsoft.com/en-us/azure/container-apps/overview), [Amazon ECS/Fargate](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/Welcome.html) e [Cloud Run](https://docs.cloud.google.com/run/docs/overview/what-is-cloud-run). Banco, armazenamento, rede, segredos e registros têm correspondentes na [comparação oficial entre provedores](https://docs.cloud.google.com/docs/get-started/aws-azure-gcp-service-comparison); veja também [PostgreSQL no Azure](https://learn.microsoft.com/en-us/azure/postgresql/overview).
+A maior mudança seria o armazenamento das fotos. Hoje `app.py` grava, lista e lê arquivos em `/app/uploads`. Blob Storage, S3 e Cloud Storage trabalham com objetos por API, então essa escolha exigiria adaptar essas operações e o acesso às imagens. O banco gerenciado continuaria usando PostgreSQL, com ajustes de conexão e operação. Se a intenção fosse manter o código sem mudanças, seria preciso avaliar uma opção de armazenamento de arquivos montável e compatível com o serviço de execução escolhido.
 
-A peça que mais muda é o volume `fotos`. Hoje `app.py` usa `foto.save()`, `os.listdir()` e `send_from_directory()` sobre `/app/uploads`. Blob Storage, S3 e Cloud Storage oferecem objetos por API, não um volume POSIX equivalente ao volume local: essa opção de migração exigiria adaptar gravação, contagem e leitura das fotos, além de permissões e URLs. O banco gerenciado continuaria falando PostgreSQL, com mudanças principalmente de conexão e operação. Para preservar o código sem alterações numa futura migração, seria necessário avaliar armazenamento de arquivos montável e compatível com a plataforma escolhida; a tabela apresenta a alternativa de objetos, sem implementá-la nesta atividade ([Azure Blob Storage](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction)).
+Fontes da tabela: [comparação entre provedores](https://docs.cloud.google.com/docs/get-started/aws-azure-gcp-service-comparison), [Azure Container Apps](https://learn.microsoft.com/en-us/azure/container-apps/overview), [Amazon ECS](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/Welcome.html), [Cloud Run](https://docs.cloud.google.com/run/docs/overview/what-is-cloud-run) e [Azure Blob Storage](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction).
