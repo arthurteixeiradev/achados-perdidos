@@ -10,7 +10,6 @@ Os testes foram realizados em 17/10/2026. As capturas e as saídas abaixo compro
 | [05-volumes-rede-imagem.txt](05-volumes-rede-imagem.txt) | Inspeção completa dos volumes e da rede, arquivos, portas e tamanho da imagem. |
 | [11-do-zero.txt](11-do-zero.txt) | Subida em uma pasta nova, usando o modelo de ambiente e volumes próprios. |
 | [oculos.jpg](oculos.jpg) | Imagem de teste usada nos uploads do README. |
-| [fotos-reteste.tar.gz](fotos-reteste.tar.gz) | Backup da foto usada na demonstração de restauração em um volume novo. |
 
 Os textos são saídas originais de uma execução anterior do mesmo código. Por isso, IDs de contêineres e nomes UUID das fotos podem diferir dos prints. Os horários do terminal estão no fuso America/Sao_Paulo; logs e cabeçalhos HTTP podem usar UTC.
 

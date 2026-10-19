@@ -95,7 +95,7 @@ No teste guiado, o diff não encontrou diferenças. A foto original e a restaura
 docker volume rm achados-perdidos_fotos_restauradas_reteste
 ```
 
-Esse backup contém as fotos, não os registros do banco. O arquivo gerado no teste está em [fotos-reteste.tar.gz](../evidencias/fotos-reteste.tar.gz).
+Esse backup contém as fotos, não os registros do banco. O arquivo é gerado pelos comandos acima e não é versionado. A criação e a restauração estão comprovadas nas capturas do [relatório de testes](../RELATORIO_TESTES.md).
 
 ## Voltar à configuração principal
 
